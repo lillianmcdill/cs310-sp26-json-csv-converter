@@ -131,12 +131,11 @@ public class Converter {
     
     @SuppressWarnings("unchecked")
     public static String jsonToCsv(String jsonString) {
-        
-        String result = ""; // default return value; replace later!
-        
-        try {
-            
-            JsonObject root = (JsonObject) Jsoner.deserialize(jsonString);
+
+    String result = "";
+
+    try {
+        JsonObject root = (JsonObject) Jsoner.deserialize(jsonString);
 
         JsonArray colHeadings = (JsonArray) root.get("ColHeadings");
         JsonArray prodNums = (JsonArray) root.get("ProdNums");
@@ -148,19 +147,37 @@ public class Converter {
         // Header row
         String[] header = new String[colHeadings.size()];
         for (int i = 0; i < colHeadings.size(); i++) {
-            header[i] = colHeadings.get(i).toString();
+            header[i] = colHeadings.get(i).toString().replaceAll("^\"|\"$", "");
         }
         csvWriter.writeNext(header);
+
+        // Find which index is "Episode"
+        int episodeIndex = -1;
+        for (int i = 0; i < colHeadings.size(); i++) {
+            if (colHeadings.get(i).toString().replaceAll("^\"|\"$", "").equalsIgnoreCase("Episode")) {
+                episodeIndex = i;
+                break;
+            }
+        }
 
         // Data rows
         for (int i = 0; i < data.size(); i++) {
             JsonArray dataRow = (JsonArray) data.get(i);
-
             String[] row = new String[dataRow.size() + 1];
-            row[0] = prodNums.get(i).toString();
+
+            // First column is ProdNum
+            row[0] = prodNums.get(i).toString().replaceAll("^\"|\"$", "");
 
             for (int j = 0; j < dataRow.size(); j++) {
-                row[j + 1] = dataRow.get(j).toString();
+                String value = dataRow.get(j).toString().replaceAll("^\"|\"$", "");
+
+                // Pad episode if this column is "Episode" and numeric
+                if (j == episodeIndex - 1 && value.matches("\\d+")) { 
+                    // -1 because prodNums occupies row[0]
+                    value = String.format("%02d", Integer.parseInt(value));
+                }
+
+                row[j + 1] = value;
             }
 
             csvWriter.writeNext(row);
@@ -168,14 +185,12 @@ public class Converter {
 
         csvWriter.close();
         result = writer.toString();
-            
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        return result.trim();
-        
+
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+
+    return result.trim();
+}
     
 }
