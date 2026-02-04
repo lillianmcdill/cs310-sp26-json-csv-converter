@@ -78,7 +78,47 @@ public class Converter {
         
         try {
         
-            // INSERT YOUR CODE HERE
+         CSVReader reader = new CSVReaderBuilder(
+            new java.io.StringReader(csvString)
+        ).build();
+
+        java.util.List<String[]> rows = reader.readAll();
+
+        String[] headers = rows.get(0);
+
+        JsonArray colHeadings = new JsonArray();
+        for (String h : headers) {
+            colHeadings.add(h);
+        }
+
+        JsonArray prodNums = new JsonArray();
+        JsonArray data = new JsonArray();
+
+        for (int i = 1; i < rows.size(); i++) {
+            String[] row = rows.get(i);
+
+            prodNums.add(row[0]);
+
+            JsonArray dataRow = new JsonArray();
+            for (int j = 1; j < row.length; j++) {
+                String value = row[j];
+                if (value.matches("\\d+")) {
+                    dataRow.add(Integer.parseInt(value));
+                }
+                else {
+                    dataRow.add(value);
+                }
+            }
+            data.add(dataRow);
+        }
+
+        JsonObject root = new JsonObject();
+        root.put("ProdNums", prodNums);
+        root.put("ColHeadings", colHeadings);
+        root.put("Data", data);
+
+        result = root.toJson();
+   
             
         }
         catch (Exception e) {
@@ -96,7 +136,38 @@ public class Converter {
         
         try {
             
-            // INSERT YOUR CODE HERE
+            JsonObject root = (JsonObject) Jsoner.deserialize(jsonString);
+
+        JsonArray colHeadings = (JsonArray) root.get("ColHeadings");
+        JsonArray prodNums = (JsonArray) root.get("ProdNums");
+        JsonArray data = (JsonArray) root.get("Data");
+
+        java.io.StringWriter writer = new java.io.StringWriter();
+        CSVWriter csvWriter = new CSVWriter(writer);
+
+        // Header row
+        String[] header = new String[colHeadings.size()];
+        for (int i = 0; i < colHeadings.size(); i++) {
+            header[i] = colHeadings.get(i).toString();
+        }
+        csvWriter.writeNext(header);
+
+        // Data rows
+        for (int i = 0; i < data.size(); i++) {
+            JsonArray dataRow = (JsonArray) data.get(i);
+
+            String[] row = new String[dataRow.size() + 1];
+            row[0] = prodNums.get(i).toString();
+
+            for (int j = 0; j < dataRow.size(); j++) {
+                row[j + 1] = dataRow.get(j).toString();
+            }
+
+            csvWriter.writeNext(row);
+        }
+
+        csvWriter.close();
+        result = writer.toString();
             
         }
         catch (Exception e) {
